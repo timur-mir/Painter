@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">Painter</string>
+    <string name="button_erase">Стереть</string>
+    <string name="button_cancel">Отмена</string>
+    <string name="button_set_color">Цвет</string>
+    <string name="button_set_line_width">Размер линии</string>
+    <string name="label_alpha">Прозрачность</string>
+    <string name="label_red">Красный</string>
+    <string name="label_green">Зелёный</string>
+    <string name="label_blue">Синий</string>
+    <string name="menuitem_clear">Очистить</string>
+    <string name="menuitem_undo">Отменить</string>
+    <string name="menuitem_color">Цвет</string>
+    <string name="menuitem_erase">Ластик</string>
+    <string name="menuitem_line_width">Размер линии</string>
+    <string name="menuitem_save_image">Сохранить</string>
+    <string name="menuitem_open_image">Загрузить</string>
+    <string name="message_erase">Удалить рисунок?</string>
+    <string name="message_error_saving"> Ошибка записи</string>
+    <string name="message_saved">
+    Изображение сохранено в Галерее</string>
+    <string name="title_color_dialog">Выбор цвета</string>
+
+    <string name="title_line_width_dialog">Выбор толщины линии</string>
+</resources>
