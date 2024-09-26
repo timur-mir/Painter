@@ -280,6 +280,7 @@ class PainterActivity : AppCompatActivity() {
 
             ERASE_MENU_ID -> {
                 doodleView!!.setDrawingColor(Color.WHITE) // белый цвет линии
+
                 return true // результат обработки события меню
             }
 

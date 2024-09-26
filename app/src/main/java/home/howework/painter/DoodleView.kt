@@ -1,5 +1,9 @@
 package home.howework.painter
 
+import home.howework.painter.R
+
+
+
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
@@ -17,6 +21,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
+import androidx.core.graphics.toColor
 import home.howework.painter.hostplace.PainterActivity.PainterHelper.bitmapChange
 import java.io.File
 import java.util.Date
@@ -38,7 +43,12 @@ class DoodleView : View {
             : Paint? = null
     private var paintLine // рисование линий на растре
             : Paint? = null
+    private var paintLine2 // рисование линий на растре
+            : Paint? = null
+    var colorOld: Color? =null
     private var pathMap // рисование текущего Paths
+            : HashMap<Int, Path>? = null
+    private var pathMap2 // рисование текущего Paths
             : HashMap<Int, Path>? = null
     private var pathMapPainter // рисование текущего Paths
             : HashMap<Int, Path>? = null
@@ -75,6 +85,8 @@ class DoodleView : View {
 
         // по умолчанию ширина линии
         paintLine!!.setStrokeCap(Paint.Cap.ROUND) // скругленные концы
+        paintLine2= Paint()
+
         // линии
         pathMap = HashMap()
         previousPointMap = HashMap()
@@ -83,6 +95,7 @@ class DoodleView : View {
     // Метод onSizeChanged создает BitMap и Canvas
     // после отображения приложения
     override fun onSizeChanged(w: Int, h: Int, oldW: Int, oldH: Int) {
+
         bitmap = Bitmap.createBitmap(
             width, height,
             Bitmap.Config.ARGB_8888
@@ -111,7 +124,14 @@ class DoodleView : View {
     // настройка цвета нарисованной линии
 
     fun setDrawingColor(color: Int) {
+flag=true
+        colorOld= paintLine?.color?.toColor()
         paintLine!!.color = color
+        pathMap2=pathMap
+        pathMap?.clear()
+
+
+
     } // завершение описания метода setDrawingColor
 
 
@@ -294,7 +314,7 @@ var n=1
         // path.reset() // переустановка контура
         oldN=lineID+n
         if(n!=1||n%2==0) {
-            flag = true
+          // flag = true
         }
         n += 1
     }
@@ -303,22 +323,29 @@ var n=1
 
         //   pathMap?.remove(lastLineId)
 //        val indexEl = pathMapCopy.size
-        val indexEl = pathMap!!.size
-        //     pathMapCopy[0].filter { it->it.value==lastPath }
-        //    if(indexEl!=0) {
-        if((lastLineId-n2) > 0){
-       pathMap!!.remove(lastLineId-n2)
-            n2 += 1
-         }
-        if (!bitmapChange) {
-            bitmap = Bitmap.createBitmap(
-                width, height,
-                Bitmap.Config.ARGB_8888
-            )
-            bitmap.eraseColor(Color.WHITE)
-            bitmapCanvas = Canvas(bitmap)
-            bitmapCanvas!!.drawBitmap(bitmap, 0f, 0f, null)
-            invalidate()
+        if (colorOld!=null){
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O&&flag) {
+                paintLine!!.color= colorOld!!.toArgb()
+            }
+            flag=false
+        }
+        if(pathMap?.isNotEmpty()==true){
+            val indexEl = pathMap!!.size
+            //     pathMapCopy[0].filter { it->it.value==lastPath }
+            //    if(indexEl!=0) {
+            if((lastLineId-n2) > 0){
+                pathMap!!.remove(lastLineId-n2)
+                n2 += 1
+            }
+            if (!bitmapChange) {
+                bitmap = Bitmap.createBitmap(
+                    width, height,
+                    Bitmap.Config.ARGB_8888
+                )
+                bitmap.eraseColor(Color.WHITE)
+                bitmapCanvas = Canvas(bitmap)
+                bitmapCanvas!!.drawBitmap(bitmap, 0f, 0f, null)
+                invalidate()
 
 //            pathMapCopy.forEach { hash ->
 //                hash.values.forEach { path ->
@@ -330,11 +357,11 @@ var n=1
 //                    invalidate()
 //                }
 //            }
-            for (key in pathMap!!.keys)
-                bitmapCanvas!!.drawPath(
-                    pathMap!![key]!!,
-                    paintLine!!
-                ) // рисование линии
+                for (key in pathMap!!.keys)
+                    bitmapCanvas!!.drawPath(
+                        pathMap!![key]!!,
+                        paintLine!!
+                    ) // рисование линии
 
 //                bitmapCanvas!!.drawPath(
 //                    it,
@@ -357,12 +384,12 @@ var n=1
 //
 //                        )
 //                    }
-            invalidate()
+                invalidate()
 
-        } else {
-            bitmapCopy = mBitmap!!.copy(Bitmap.Config.ARGB_8888, true)
-            bitmapCanvas = Canvas(bitmapCopy)
-            bitmapCanvas!!.drawBitmap(bitmapCopy, 0f, 0f, null)
+            } else {
+                bitmapCopy = mBitmap!!.copy(Bitmap.Config.ARGB_8888, true)
+                bitmapCanvas = Canvas(bitmapCopy)
+                bitmapCanvas!!.drawBitmap(bitmapCopy, 0f, 0f, null)
 //            pathMapCopy.forEach {
 //                for (key in it.keys) {
 //                    bitmapCanvas!!.drawPath(
@@ -372,13 +399,98 @@ var n=1
 //                }
 //
 //            }
-            for (key in pathMap!!.keys)
-                bitmapCanvas!!.drawPath(
-                    pathMap!![key]!!,
-                    paintLine!!
-                ) // рисование линии
+                for (key in pathMap!!.keys)
+                    bitmapCanvas!!.drawPath(
+                        pathMap!![key]!!,
+                        paintLine!!
+                    ) // рисование линии
 
-            invalidate()
+                invalidate()
+            }
+
+        }
+        else{
+            if(pathMap2!=null) {
+                pathMap = pathMap2
+                val indexEl = pathMap!!.size
+                //     pathMapCopy[0].filter { it->it.value==lastPath }
+                //    if(indexEl!=0) {
+                if ((lastLineId - n2) > 0) {
+                    pathMap!!.remove(lastLineId - n2)
+                    n2 += 1
+                }
+                if (!bitmapChange) {
+                    bitmap = Bitmap.createBitmap(
+                        width, height,
+                        Bitmap.Config.ARGB_8888
+                    )
+                    bitmap.eraseColor(Color.WHITE)
+                    bitmapCanvas = Canvas(bitmap)
+                    bitmapCanvas!!.drawBitmap(bitmap, 0f, 0f, null)
+                    invalidate()
+
+//            pathMapCopy.forEach { hash ->
+//                hash.values.forEach { path ->
+//                    bitmapCanvas!!.drawPath(
+//                        path,
+//                        paintLine!!
+//
+//                    )
+//                    invalidate()
+//                }
+//            }
+                    for (key in pathMap!!.keys)
+                        bitmapCanvas!!.drawPath(
+                            pathMap!![key]!!,
+                            paintLine!!
+                        ) // рисование линии
+
+//                bitmapCanvas!!.drawPath(
+//                    it,
+//                    paintLine!!
+//
+//                )
+
+
+//                if(!bitmapChange) {
+//                    bitmap = Bitmap.createBitmap(
+//                        width, height,
+//                        Bitmap.Config.ARGB_8888
+//                    )
+//                    bitmapCanvas = Canvas(bitmap)
+//                    bitmapCanvas!!.drawBitmap(bitmap, 0f, 0f, null)
+//                    for (key in pathMap!!.keys) {
+//                        bitmapCanvas!!.drawPath(
+//                            pathMap!![key]!!,
+//                            paintLine!!
+//
+//                        )
+//                    }
+                    invalidate()
+
+                } else {
+                    bitmapCopy = mBitmap!!.copy(Bitmap.Config.ARGB_8888, true)
+                    bitmapCanvas = Canvas(bitmapCopy)
+                    bitmapCanvas!!.drawBitmap(bitmapCopy, 0f, 0f, null)
+//            pathMapCopy.forEach {
+//                for (key in it.keys) {
+//                    bitmapCanvas!!.drawPath(
+//                        it!![key]!!,
+//                        paintLine!!
+//                    )
+//                }
+//
+//            }
+                    for (key in pathMap!!.keys)
+                        bitmapCanvas!!.drawPath(
+                            pathMap!![key]!!,
+                            paintLine!!
+                        ) // рисование линии
+
+                    invalidate()
+                }
+            }
+
         }
 
     }
