@@ -27,9 +27,7 @@ class DoodleView : View {
     // определяется, переместил ли пользователь палец на расстояние,
     // достаточное для повторного рисования
     private val TOUCH_TOLERANCE = 10f
-
-    //    private var bitmap // область для отображения или сохранения
-//            : Bitmap? = null
+    val idP = 0
     private lateinit var bitmap: Bitmap
     private var mBitmap // область для отображения или сохранения
             : Bitmap? = null
@@ -42,13 +40,18 @@ class DoodleView : View {
             : Paint? = null
     private var pathMap // рисование текущего Paths
             : HashMap<Int, Path>? = null
+    private var pathMapPainter // рисование текущего Paths
+            : HashMap<Int, Path>? = null
     private var previousPointMap // текущие Points
             : HashMap<Int, Point>? = null
-            companion object{
-                var lastLineId=0
-                private var pathMapCopy
-                        :ArrayList< HashMap<Int, Path> > =ArrayList<HashMap<Int, Path>>()
-            }
+
+    companion object {
+        var lastLineId = 0
+        lateinit var lastPath: Path
+        private var pathMapCopy
+                : ArrayList<HashMap<Int, Path>> = ArrayList<HashMap<Int, Path>>()
+    }
+
     constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs) {
         paintScreen = Paint() // применяется для отображения
 
@@ -63,8 +66,6 @@ class DoodleView : View {
         paintLine = Paint()
         // paintLine.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
         paintLine!!.setAntiAlias(true) // сглаживание краев
-
-        // нарисованной линии
         // нарисованной линии
         paintLine!!.setColor(Color.BLACK) // по умолчанию выбран черный
 
@@ -73,10 +74,7 @@ class DoodleView : View {
         paintLine!!.setStrokeWidth(5f) // настраивается заданная
 
         // по умолчанию ширина линии
-        // по умолчанию ширина линии
         paintLine!!.setStrokeCap(Paint.Cap.ROUND) // скругленные концы
-
-        // линии
         // линии
         pathMap = HashMap()
         previousPointMap = HashMap()
@@ -85,7 +83,7 @@ class DoodleView : View {
     // Метод onSizeChanged создает BitMap и Canvas
     // после отображения приложения
     override fun onSizeChanged(w: Int, h: Int, oldW: Int, oldH: Int) {
-bitmap = Bitmap.createBitmap(
+        bitmap = Bitmap.createBitmap(
             width, height,
             Bitmap.Config.ARGB_8888
         )
@@ -99,7 +97,7 @@ bitmap = Bitmap.createBitmap(
         pathMap!!.clear() // удаление всех контуров
         previousPointMap!!.clear() // удаление всех предыдущих точек
         bitmap.eraseColor(Color.WHITE)
-        bitmapChange=false
+        bitmapChange = false
         bitmap = Bitmap.createBitmap(
             width, height,
             Bitmap.Config.ARGB_8888
@@ -143,13 +141,13 @@ bitmap = Bitmap.createBitmap(
         // для каждого только что нарисованного контура
         for (key in pathMap!!.keys)
             canvas.drawPath(
-            pathMap!![key]!!,
-            paintLine!!
-        ) // рисование линии
+                pathMap!![key]!!,
+                paintLine!!
+            ) // рисование линии
     } // завершение описания метода onDraw
 
     fun setImage(bitmapImage: Bitmap) {
-        bitmapChange=true
+        bitmapChange = true
         mBitmap = bitmapImage
         if (mBitmap != null) {
             bitmapCopy = mBitmap!!.copy(Bitmap.Config.ARGB_8888, true)
@@ -158,8 +156,11 @@ bitmap = Bitmap.createBitmap(
             invalidate() // обновление экрана
         }
     }
-
+var n=1
+    var oldN=0
+    var flag=false
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        n2=0
         // получение типа события и идентификатора указателя,
         // который вызвал событие
         val action = event.actionMasked // тип события
@@ -194,22 +195,35 @@ bitmap = Bitmap.createBitmap(
         // идентификатора данного прикосновения
         val point: Point? // применяется для хранения последней точки контура
         // если уже есть контур для идентификатора lineID
-        if (pathMap!!.containsKey(lineID)) {
-            path = pathMap!![lineID] // получение контура
-            path!!.reset() // переустановка контура из-за нового
-            // прикосновения
-            point = previousPointMap!![lineID] // последняя точка контура
-        } // конец блока f
-        else {
+//        if (pathMap!!.containsKey(lineID)) {
+//            path = pathMap!![lineID] // получение контура
+//            //   path!!.reset() // переустановка контура из-за нового
+//            // прикосновения
+//            point = previousPointMap!![lineID] // последняя точка контура
+//        } // конец блока f
+//        else {
+//            path = Path() // создание нового контура
+//            pathMap!![lineID] = path // добавление контура в карту
+////            val hashElement= hashMapOf<Int,Path>(lineID to path!!)
+////            pathMapCopy.add(hashElement)
+////            pathMapCopy.add(pathMap!!)
+//
+//            point = Point() // создание новой точки
+//            previousPointMap!![lineID] = point // добавление точки
+//            // на карту
+//        } // конец блока else
+//                if (pathMap!!.containsKey(oldN)&&flag) {
+//            path = pathMap!![oldN] // получение контура
+//               path!!.reset() // переустановка контура из-за нового
+//            // прикосновения
+//            point = previousPointMap!![oldN] // последняя точка контура
+//                     }
+//        else{
             path = Path() // создание нового контура
-            pathMap!![lineID] = path // добавление контура в карту
-            pathMapCopy.add(pathMap!!)
-            lastLineId=  lineID
+            pathMap!![lineID + n] = path // добавление контура в карту
             point = Point() // создание новой точки
-            previousPointMap!![lineID] = point // добавление точки
-            // на карту
-        } // конец блока else
-
+            previousPointMap!![lineID + n] = point // добавление точки
+//        }
         // перемещение координат прикосновения
         path!!.moveTo(x, y)
         point!!.x = x.toInt()
@@ -224,15 +238,15 @@ bitmap = Bitmap.createBitmap(
             val pointerID = event.getPointerId(i)
             val pointerIndex = event.findPointerIndex(pointerID)
             // если имеется контур, связанный с указателем
-            if (pathMap!!.containsKey(pointerID)) {
+            if (pathMap!!.containsKey(pointerID+n)) {
                 // получение новых координат указателя
                 val newX = event.getX(pointerIndex)
                 val newY = event.getY(pointerIndex)
 
                 // получение контура и предыдущей точки, связанных
                 // с этим указателем
-                val path = pathMap!![pointerID]
-                val point = previousPointMap!![pointerID]
+                val path = pathMap!![pointerID+n]
+                val point = previousPointMap!![pointerID+n]
 
                 // вычисление перемещения от точки последнего обновления
                 val deltaX = Math.abs(newX - point!!.x)
@@ -249,48 +263,123 @@ bitmap = Bitmap.createBitmap(
                     // хранение новых координат
                     point.x = newX.toInt()
                     point.y = newY.toInt()
-                } // конец определения блока if
+                }
+
+                // конец определения блока if
+
+                val hashElement = hashMapOf<Int, Path>(idP + 1 to path!!)
+                pathMapCopy.add(hashElement)
             } // конец блока if
         } // конец блока for
     } // конец определения метода touchMoved
 
     private fun touchEnded(lineID: Int) {
-        val path = pathMap!![lineID] // получение соответствующего сегмента
-
+        //  pathMapPainter=HashMap()
+        var path:Path?=null
+//        if(n!=1||n%2==0) {
+//             path = pathMap!![oldN] // получение соответствующего сегмента
+//        }
+//        else
+//        {
+//             path = pathMap!![lineID + n] // получение соответствующего сегмента
+//        }
+        path = pathMap!![lineID + n] // получение соответствующего сегмента
+//        val hashElement= hashMapOf<Int,Path>(lineID to path!!)
+//        pathMapCopy.add(hashElement)
+        lastLineId = lineID+n
+        if (path != null) {
+            lastPath = path
+        }
         bitmapCanvas!!.drawPath(path!!, paintLine!!) // рисует bitmapCanvas
-       path.reset() // переустановка контура
+        // path.reset() // переустановка контура
+        oldN=lineID+n
+        if(n!=1||n%2==0) {
+            flag = true
+        }
+        n += 1
     }
-    fun clearLastPath(){
-        pathMap?.remove(lastLineId)
-                if(!bitmapChange) {
-                    bitmap = Bitmap.createBitmap(
-                        width, height,
-                        Bitmap.Config.ARGB_8888
-                    )
-                    bitmapCanvas = Canvas(bitmap)
-                    bitmapCanvas!!.drawBitmap(bitmap, 0f, 0f, null)
-                    for (key in pathMap!!.keys) {
-                        bitmapCanvas!!.drawPath(
-                            pathMap!![key]!!,
-                            paintLine!!
+    var n2=0
+    fun clearLastPath() {
 
-                        )
-                    }
-                        invalidate()
+        //   pathMap?.remove(lastLineId)
+//        val indexEl = pathMapCopy.size
+        val indexEl = pathMap!!.size
+        //     pathMapCopy[0].filter { it->it.value==lastPath }
+        //    if(indexEl!=0) {
+        if((lastLineId-n2) > 0){
+       pathMap!!.remove(lastLineId-n2)
+            n2 += 1
+         }
+        if (!bitmapChange) {
+            bitmap = Bitmap.createBitmap(
+                width, height,
+                Bitmap.Config.ARGB_8888
+            )
+            bitmap.eraseColor(Color.WHITE)
+            bitmapCanvas = Canvas(bitmap)
+            bitmapCanvas!!.drawBitmap(bitmap, 0f, 0f, null)
+            invalidate()
 
-                    }
+//            pathMapCopy.forEach { hash ->
+//                hash.values.forEach { path ->
+//                    bitmapCanvas!!.drawPath(
+//                        path,
+//                        paintLine!!
+//
+//                    )
+//                    invalidate()
+//                }
+//            }
+            for (key in pathMap!!.keys)
+                bitmapCanvas!!.drawPath(
+                    pathMap!![key]!!,
+                    paintLine!!
+                ) // рисование линии
 
-        else
-                {
-                    bitmapCopy = mBitmap!!.copy(Bitmap.Config.ARGB_8888, true)
-                    bitmapCanvas = Canvas(bitmapCopy)
-                    bitmapCanvas!!.drawBitmap(bitmapCopy, 0f, 0f, null)
-                    for (key in pathMap!!.keys) {
-                        bitmapCanvas!!.drawPath(pathMap!![key]!!, paintLine!!)
-                    }
+//                bitmapCanvas!!.drawPath(
+//                    it,
+//                    paintLine!!
+//
+//                )
 
-                   invalidate()
-                }
+
+//                if(!bitmapChange) {
+//                    bitmap = Bitmap.createBitmap(
+//                        width, height,
+//                        Bitmap.Config.ARGB_8888
+//                    )
+//                    bitmapCanvas = Canvas(bitmap)
+//                    bitmapCanvas!!.drawBitmap(bitmap, 0f, 0f, null)
+//                    for (key in pathMap!!.keys) {
+//                        bitmapCanvas!!.drawPath(
+//                            pathMap!![key]!!,
+//                            paintLine!!
+//
+//                        )
+//                    }
+            invalidate()
+
+        } else {
+            bitmapCopy = mBitmap!!.copy(Bitmap.Config.ARGB_8888, true)
+            bitmapCanvas = Canvas(bitmapCopy)
+            bitmapCanvas!!.drawBitmap(bitmapCopy, 0f, 0f, null)
+//            pathMapCopy.forEach {
+//                for (key in it.keys) {
+//                    bitmapCanvas!!.drawPath(
+//                        it!![key]!!,
+//                        paintLine!!
+//                    )
+//                }
+//
+//            }
+            for (key in pathMap!!.keys)
+                bitmapCanvas!!.drawPath(
+                    pathMap!![key]!!,
+                    paintLine!!
+                ) // рисование линии
+
+            invalidate()
+        }
 
     }
 
@@ -300,7 +389,7 @@ bitmap = Bitmap.createBitmap(
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             var date: Date = Date()
-            val name = "Рисунок_"+"$date" + ".jpg"
+            val name = "Рисунок_" + "$date" + ".jpg"
 
             // insert the image on the device
             if (::bitmapCopy.isInitialized) {
@@ -385,13 +474,15 @@ bitmap = Bitmap.createBitmap(
                         Objects.requireNonNull(imageUri)?.let { resolver?.openOutputStream(it) }
                     if (::bitmapCopy.isInitialized) {
                         bitmapCopy.compress(Bitmap.CompressFormat.JPEG, 100, fos)
-                    }
-                    else
-                    {
+                    } else {
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)
                     }
                     Objects.requireNonNull(fos)
-                    Toast.makeText(context, "Изображение сохранено в папке художника)", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Изображение сохранено в папке художника)",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
                 }
             } catch (e: Exception) {
