@@ -14,8 +14,11 @@
     <string name="menuitem_erase">Ластик</string>
     <string name="menuitem_line_width">Размер линии</string>
     <string name="menuitem_save_image">Сохранить</string>
+    <string name="menuitem_save_text">Добавить комментарий</string>
+    <string name="menuitem_set_background">Сменить фон</string>
     <string name="menuitem_open_image">Загрузить</string>
     <string name="message_erase">Удалить рисунок?</string>
+
     <string name="message_error_saving"> Ошибка записи</string>
     <string name="message_saved">
     Изображение сохранено в Галерее</string>

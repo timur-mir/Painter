@@ -27,7 +27,6 @@ import java.io.File
 import java.util.Date
 import java.util.Objects
 
-
 class DoodleView : View {
     // определяется, переместил ли пользователь палец на расстояние,
     // достаточное для повторного рисования
@@ -56,6 +55,8 @@ class DoodleView : View {
             : HashMap<Int, Point>? = null
 
     companion object {
+        var drawTextFlag=false
+        var drawTextFlagUp=false
         var oldPaintLine = 5f
         val oldPaintLineHistory: ArrayList<Float> = ArrayList<Float>(100)
         var oldColorHistory:HashMap<Int,Color>?=null
@@ -127,12 +128,13 @@ class DoodleView : View {
     fun clear() {
         pathMap!!.clear() // удаление всех контуров
         previousPointMap!!.clear() // удаление всех предыдущих точек
-        bitmap.eraseColor(Color.WHITE)
+
         bitmapChange = false
         bitmap = Bitmap.createBitmap(
             width, height,
             Bitmap.Config.ARGB_8888
         )
+        bitmap.eraseColor(Color.WHITE)
         bitmapCanvas = Canvas(bitmap)
         bitmapCanvas!!.drawBitmap(bitmap, 0f, 0f, null)
         paintLine!!.color = Color.BLACK
@@ -144,7 +146,7 @@ class DoodleView : View {
     fun setDrawingColor(color: Int) {
         flag = true
         actualColor=color.toColor()
-        paintLine!!.color = color
+        paintLine!!.setColor(color)
 //        oldColorHistory!![indexForChangeStroke]= actualColor!!
         historyColorChange=true
 //        pathMap2 = pathMap
@@ -192,24 +194,29 @@ class DoodleView : View {
                     lineIdRowList.forEach { lineId ->
                         if (key == lineId) {
                             paintLine!!.strokeWidth = oldPaintLineHistory[index]
-                             colorIndexForCompare!!.forEach { (indexNewColor, value) ->
-                                 if(indexNewColor==key)
-                                 {
+                            colorIndexForCompare!!.forEach { (indexNewColor, value) ->
+                                if(indexNewColor==key)
+                                {
 //                                     paintLine!!.color = oldColorHistory!![index]!!.toArgb()
-                                     paintLine!!.color =value.toArgb()
-                                 }
-                                 else
-                                 {
-                                   //  paintLine!!.color = oldColorHistory!![index]!!.toArgb()
-                                 }
+                                    paintLine!!.color =value.toArgb()
+                                }
+                                else
+                                {
+                                    //  paintLine!!.color = oldColorHistory!![index]!!.toArgb()
+                                }
 
-                             }
+                            }
 
                             canvas.drawPath(
                                 pathMap!![lineId]!!,
                                 paintLine!!
                             ) // рисование линии
                             paintLine!!.strokeWidth = actualPaintLine
+
+                            bitmapCanvas?.drawPath(
+                                pathMap!![lineId]!!,
+                                paintLine!!
+                            )
                         }
                     }
                 }
@@ -227,6 +234,10 @@ class DoodleView : View {
                             pathMap!![key]!!,
                             paintLine!!
                         ) // рисование линии
+                        bitmapCanvas?.drawPath(
+                            pathMap!![key]!!,
+                            paintLine!!
+                        )
                     }
                     //pathMap!!.firstNotNullOf{it.key!=indexNewColor
 //                    else {
@@ -265,11 +276,49 @@ class DoodleView : View {
 //                )
 //            }
 //        }
-    //   }
+        //   }
 
-     //   }
+        //   }
     } // завершение описания метода onDraw
+    private var step=4
+    private var step2=4
+    fun setBackground(color: Int){
+        bitmap.eraseColor(color)
+    }
+    fun setText(text:String){
+        paintLine2=Paint()
+        paintLine2!!.textSize = convertToPixels(context, 4)
+        paintLine2!!.setColor(Color.RED)
+        if(pathMap?.size!! >0){
+            if(drawTextFlag){
+                if(step<=20) {
+                    bitmapCanvas?.drawText(
+                        text,
+                        convertToPixels(context, 4),
+                        convertToPixels(context, 200 + step),
+                        paintLine2!!
+                    )
+                    step += 4
+                }
+            }
+            else{
+                drawTextFlag=true
+                bitmapCanvas?.drawText(text, convertToPixels(context, 4), convertToPixels(context, 200),paintLine2!!)
+            }
+        }
+        else {
+            if(drawTextFlagUp){
 
+                bitmapCanvas?.drawText(text, convertToPixels(context, 4), convertToPixels(context, 20+step2),paintLine2!!)
+                step2 += 4
+            }
+            else{
+                drawTextFlagUp=true
+                bitmapCanvas?.drawText(text, convertToPixels(context, 4), convertToPixels(context, 20),paintLine2!!)
+            }
+        }
+
+    }
     fun setImage(bitmapImage: Bitmap) {
         bitmapChange = true
         mBitmap = bitmapImage

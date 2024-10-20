@@ -2,6 +2,7 @@ package home.howework.painter.hostplace
 
 
 import android.Manifest
+import android.R.attr
 import android.app.Activity
 import android.app.Dialog
 import android.content.DialogInterface
@@ -18,6 +19,7 @@ import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.speech.RecognizerIntent
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -25,6 +27,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -32,13 +35,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import home.howework.painter.DoodleView
 import home.howework.painter.R
+import home.howework.painter.hostplace.PainterActivity.PainterHelper.colorBackgroundForEraser
 import java.io.IOException
+import java.util.ArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 
 
 class PainterActivity : AppCompatActivity() {
     private var doodleView // создание View
             : DoodleView? = null
+
+    // private lateinit var txt_speech:TextView
     private var sensorManager // отслеживание акселерометра
             : SensorManager? = null
     private var acceleration // ускорение
@@ -60,6 +67,8 @@ class PainterActivity : AppCompatActivity() {
     private val SAVE_MENU_ID = Menu.FIRST + 4
     private val OPEN_MENU_ID = Menu.FIRST + 5
     private val UNDO_MENU_ID = Menu.FIRST + 6
+    private val SAVE_TEXT = Menu.FIRST + 7
+    private val SET_BACKGROUND = Menu.FIRST + 8
 
     // значение, используемое для идентификации удара устройства
     private val ACCELERATION_THRESHOLD = 15000
@@ -72,7 +81,7 @@ class PainterActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { map ->
             if (map.values.all { it }) {
                 Toast.makeText(
-                  this,
+                    this,
                     "Теперь разрешения на запись есть",
                     Toast.LENGTH_LONG
                 ).show()
@@ -108,6 +117,7 @@ class PainterActivity : AppCompatActivity() {
                 }
             }
         }
+    private val RECOGNIZER_RESULT = 1234
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -118,10 +128,22 @@ class PainterActivity : AppCompatActivity() {
         lastAcceleration = SensorManager.GRAVITY_EARTH;
         enableAccelerometerListening(); // прослушивания тряски
     }
-    fun OpenAndSetImageFromGallery(){
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == RECOGNIZER_RESULT && resultCode == RESULT_OK) {
+            val matches: ArrayList<String>? =
+                data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+
+            doodleView?.setText(matches?.get(0).toString())
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    fun OpenAndSetImageFromGallery() {
         val pickImg = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.INTERNAL_CONTENT_URI)
         changeImage.launch(pickImg)
     }
+
     private fun checkPermission() {
         val isAllGranted = REQUEST_PERMISSIONS.all { permission ->
             ContextCompat.checkSelfPermission(
@@ -138,6 +160,7 @@ class PainterActivity : AppCompatActivity() {
 
 
     }
+
     override fun onPause() {
         super.onPause()
         disableAccelerometerListening() // не прослушивать тряску
@@ -167,67 +190,69 @@ class PainterActivity : AppCompatActivity() {
         } // конец блока if
     } // конец описания метода disableAccelerometerListening
 
-   val sensorEventListener = object:SensorEventListener{
-       override fun onSensorChanged(event: SensorEvent?) {
-           // предотвращение отображения других диалоговых окон
-           // предотвращение отображения других диалоговых окон
-           if (!dialogIsDisplayed.get()) {
-               // получение значений x, y и z для SensorEvent
-               val x = event!!.values[0]
-               val y = event.values[1]
-               val z = event.values[2]
+    val sensorEventListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent?) {
+            // предотвращение отображения других диалоговых окон
+            // предотвращение отображения других диалоговых окон
+            if (!dialogIsDisplayed.get()) {
+                // получение значений x, y и z для SensorEvent
+                val x = event!!.values[0]
+                val y = event.values[1]
+                val z = event.values[2]
 
-               // сохранение предыдущего значения ускорения
-               lastAcceleration = currentAcceleration
+                // сохранение предыдущего значения ускорения
+                lastAcceleration = currentAcceleration
 
-               // вычисление текущего ускорения
-               currentAcceleration = x * x + y * y + z * z
+                // вычисление текущего ускорения
+                currentAcceleration = x * x + y * y + z * z
 
-               // вычисление изменения ускорения
-               acceleration = currentAcceleration *
-                       (currentAcceleration - lastAcceleration)
+                // вычисление изменения ускорения
+                acceleration = currentAcceleration *
+                        (currentAcceleration - lastAcceleration)
 
-               // если ускорение превышает определенный уровень
-               if (acceleration > ACCELERATION_THRESHOLD) {
-                   // создание нового AlertDialog Builder
-                   val builder: AlertDialog.Builder = object :AlertDialog.Builder(this@PainterActivity){}
+                // если ускорение превышает определенный уровень
+                if (acceleration > ACCELERATION_THRESHOLD) {
+                    // создание нового AlertDialog Builder
+                    val builder: AlertDialog.Builder =
+                        object : AlertDialog.Builder(this@PainterActivity) {}
 
-                   // создание сообщения AlertDialog
-                   builder.setMessage(R.string.message_erase)
-                   builder.setCancelable(true)
+                    // создание сообщения AlertDialog
+                    builder.setMessage(R.string.message_erase)
+                    builder.setCancelable(true)
 
-                   // добавление кнопки Erase
-                   builder.setPositiveButton(
-                       R.string.button_erase,
-                       DialogInterface.OnClickListener { dialog, id ->
-                           dialogIsDisplayed.set(false)
-                           doodleView!!.clear() // очистка экрана
-                       } // конец метода onClick
-                       // конец анонимного внутреннего класса
-                   ) // завершение вызова setPositiveButton
+                    // добавление кнопки Erase
+                    builder.setPositiveButton(
+                        R.string.button_erase,
+                        DialogInterface.OnClickListener { dialog, id ->
+                            dialogIsDisplayed.set(false)
+                            doodleView!!.clear() // очистка экрана
+                        } // конец метода onClick
+                        // конец анонимного внутреннего класса
+                    ) // завершение вызова setPositiveButton
 
-                   // добавление кнопки Cancel
-                   builder.setNegativeButton(
-                       R.string.button_cancel,
-                       DialogInterface.OnClickListener { dialog, id ->
-                           dialogIsDisplayed.set(false)
-                           dialog.cancel() // скрытие диалогового окна
-                       } // конец метода onClick
-                       // конец анонимного внутреннего класса
-                   ) // завершение вызова setNegativeButton
-                   dialogIsDisplayed.set(true) // диалоговое окно,
-                   // отображаемое на экране
-                   builder.show() // отображение диалогового окна
-               } // конец блока if
-           } // конец блока if
+                    // добавление кнопки Cancel
+                    builder.setNegativeButton(
+                        R.string.button_cancel,
+                        DialogInterface.OnClickListener { dialog, id ->
+                            dialogIsDisplayed.set(false)
+                            dialog.cancel() // скрытие диалогового окна
+                        } // конец метода onClick
+                        // конец анонимного внутреннего класса
+                    ) // завершение вызова setNegativeButton
+                    dialogIsDisplayed.set(true) // диалоговое окно,
+                    // отображаемое на экране
+                    builder.show() // отображение диалогового окна
+                } // конец блока if
+            } // конец блока if
 
-       }
+        }
 
-       override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-           TODO("Not yet implemented")
-       }
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+            TODO("Not yet implemented")
+        }
 
-   }
+    }
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         super.onCreateOptionsMenu(menu) // вызов метода суперкласса
 
@@ -253,12 +278,21 @@ class PainterActivity : AppCompatActivity() {
             R.string.menuitem_save_image
         )
         menu.add(
+            Menu.NONE, SAVE_TEXT, Menu.NONE,
+            R.string.menuitem_save_text
+        )
+        menu.add(
             Menu.NONE, OPEN_MENU_ID, Menu.NONE,
             R.string.menuitem_open_image
         )
         menu.add(
             Menu.NONE, UNDO_MENU_ID, Menu.NONE,
             R.string.menuitem_undo
+        )
+
+        menu.add(
+            Menu.NONE, SET_BACKGROUND, Menu.NONE,
+            R.string.menuitem_set_background
         )
         return true // обработано создание параметров меню
     } // завершение метода onCreateOptionsMenu
@@ -279,7 +313,13 @@ class PainterActivity : AppCompatActivity() {
             }
 
             ERASE_MENU_ID -> {
-                doodleView!!.setDrawingColor(Color.WHITE) // белый цвет линии
+                    if(backGroundItemSelectedForCopy){
+                        doodleView!!.setDrawingColor(colorBackgroundForEraser)
+                    }
+                else
+                    {
+                    doodleView!!.setDrawingColor(Color.WHITE)
+                    } // белый цвет линии
 
                 return true // результат обработки события меню
             }
@@ -295,13 +335,33 @@ class PainterActivity : AppCompatActivity() {
             }
 
             OPEN_MENU_ID -> {
-             OpenAndSetImageFromGallery()
+                OpenAndSetImageFromGallery()
                 return true // результат обработки события меню
             }
-          UNDO_MENU_ID -> {
-              doodleView?.clearLastPath()
-              doodleView?.postInvalidate()
+
+            UNDO_MENU_ID -> {
+                doodleView?.clearLastPath()
+                doodleView?.postInvalidate()
+
                 return true // результат обработки события меню
+            }
+
+            SET_BACKGROUND -> {
+                backGroundItemSelected = true
+                showColorDialog() // диалоговое окно выбора цвета
+                // doodleView?.setBackground()
+                return true
+            }
+
+            SAVE_TEXT -> {
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                )
+                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speech to text")
+                startActivityForResult(intent, RECOGNIZER_RESULT)
+                return true
             }
         }
         return super.onOptionsItemSelected(item) // вызов метода
@@ -342,6 +402,7 @@ class PainterActivity : AppCompatActivity() {
         dialogIsDisplayed.set(true) // диалоговое окна на экране
         currentDialog!!.show() // отображение диалогового окна
     } // конец метода showColorDialog
+
     private val colorSeekBarChanged: OnSeekBarChangeListener = object : OnSeekBarChangeListener {
         override fun onProgressChanged(
             seekBar: SeekBar, progress: Int,
@@ -380,19 +441,35 @@ class PainterActivity : AppCompatActivity() {
         val blueSeekBar = currentDialog!!.findViewById<View>(R.id.blueSeekBar) as SeekBar
 
         // выбор цвета линии
-        doodleView!!.setDrawingColor(
-            Color.argb(
+        if (backGroundItemSelected) {
+            doodleView!!.setBackground(
+                Color.argb(
+                    alphaSeekBar.progress, redSeekBar.progress,
+                    greenSeekBar.progress, blueSeekBar.progress
+                )
+            )
+            backGroundItemSelectedForCopy=true
+            colorBackgroundForEraser =  Color.argb(
                 alphaSeekBar.progress, redSeekBar.progress,
                 greenSeekBar.progress, blueSeekBar.progress
             )
-        )
+            backGroundItemSelected = false
+        } else {
+            doodleView!!.setDrawingColor(
+                Color.argb(
+                    alphaSeekBar.progress, redSeekBar.progress,
+                    greenSeekBar.progress, blueSeekBar.progress
+                )
+            )
+        }
         dialogIsDisplayed.set(false) // диалоговое окно не на экране
         currentDialog!!.dismiss() // скрытие диалогового окна
         currentDialog = null // диалоговое окно не нужно
     } // конец метода onClick
+
     // конец определения интерфейса setColorButtonListener
     // отображение диалогового окна, в котором выбирается толщина линии
-    private  fun showLineWidthDialog() {
+    private fun showLineWidthDialog() {
         // создание диалогового окна и «раздувание» его содержимого
         currentDialog = Dialog(this)
         currentDialog!!.setContentView(R.layout.width_dialog)
@@ -426,6 +503,7 @@ class PainterActivity : AppCompatActivity() {
 
             // конфигурирование объекта Paint для текущего значения SeekBar
             val p = Paint()
+
             p.color = doodleView!!.getDrawingColor()
             p.strokeCap = Paint.Cap.ROUND
             p.strokeWidth = progress.toFloat()
@@ -459,6 +537,9 @@ class PainterActivity : AppCompatActivity() {
 
 
     companion object {
+        var backGroundItemSelected = false
+        var backGroundItemSelectedForCopy = false
+
 
         private val REQUEST_PERMISSIONS: Array<String> = buildList {
 
@@ -479,7 +560,9 @@ class PainterActivity : AppCompatActivity() {
 
 
     }
+
     object PainterHelper {
-            var bitmapChange=false
+        var bitmapChange = false
+        var colorBackgroundForEraser=0
     }
 }
